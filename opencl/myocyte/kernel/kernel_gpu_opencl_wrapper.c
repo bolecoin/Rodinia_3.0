@@ -47,7 +47,7 @@
 //	MAIN FUNCTION
 //========================================================================================================================================================================================================200
 
-int 
+int
 kernel_gpu_opencl_wrapper(	int xmax,
 							int workload,
 
@@ -93,18 +93,18 @@ kernel_gpu_opencl_wrapper(	int xmax,
 
 	// Get the number of available platforms
 	cl_uint num_platforms;
-	error = clGetPlatformIDs(	0, 
-								NULL, 
+	error = clGetPlatformIDs(	0,
+								NULL,
 								&num_platforms);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Get the list of available platforms
 	cl_platform_id *platforms = (cl_platform_id *)malloc(sizeof(cl_platform_id) * num_platforms);
-	error = clGetPlatformIDs(	num_platforms, 
-								platforms, 
+	error = clGetPlatformIDs(	num_platforms,
+								platforms,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Select the 1st platform
@@ -112,12 +112,12 @@ kernel_gpu_opencl_wrapper(	int xmax,
 
 	// Get the name of the selected platform and print it (if there are multiple platforms, choose the first one)
 	char pbuf[100];
-	error = clGetPlatformInfo(	platform, 
-								CL_PLATFORM_VENDOR, 
-								sizeof(pbuf), 
-								pbuf, 
+	error = clGetPlatformInfo(	platform,
+								CL_PLATFORM_VENDOR,
+								sizeof(pbuf),
+								pbuf,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 	printf("Platform: %s\n", pbuf);
 
@@ -126,18 +126,18 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	//====================================================================================================100
 
 	// Create context properties for selected platform
-	cl_context_properties context_properties[3] = {	CL_CONTEXT_PLATFORM, 
-													(cl_context_properties) platform, 
+	cl_context_properties context_properties[3] = {	CL_CONTEXT_PLATFORM,
+													(cl_context_properties) platform,
 													0};
 
 	// Create context for selected platform being GPU
 	cl_context context;
-	context = clCreateContextFromType(	context_properties, 
-										CL_DEVICE_TYPE_GPU, 
-										NULL, 
-										NULL, 
+	context = clCreateContextFromType(	context_properties,
+										CL_DEVICE_TYPE_CPU,
+										NULL,
+										NULL,
 										&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -146,22 +146,22 @@ kernel_gpu_opencl_wrapper(	int xmax,
 
 	// Get the number of devices (previousely selected for the context)
 	size_t devices_size;
-	error = clGetContextInfo(	context, 
-								CL_CONTEXT_DEVICES, 
-								0, 
-								NULL, 
+	error = clGetContextInfo(	context,
+								CL_CONTEXT_DEVICES,
+								0,
+								NULL,
 								&devices_size);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Get the list of devices (previousely selected for the context)
 	cl_device_id *devices = (cl_device_id *) malloc(devices_size);
-	error = clGetContextInfo(	context, 
-								CL_CONTEXT_DEVICES, 
-								devices_size, 
-								devices, 
+	error = clGetContextInfo(	context,
+								CL_CONTEXT_DEVICES,
+								devices_size,
+								devices,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Select the first device (previousely selected for the context) (if there are multiple devices, choose the first one)
@@ -169,12 +169,12 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	device = devices[0];
 
 	// Get the name of the selected device (previousely selected for the context) and print it
-	error = clGetDeviceInfo(device, 
-							CL_DEVICE_NAME, 
-							sizeof(pbuf), 
-							pbuf, 
+	error = clGetDeviceInfo(device,
+							CL_DEVICE_NAME,
+							sizeof(pbuf),
+							pbuf,
 							NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 	printf("Device: %s\n", pbuf);
 
@@ -184,11 +184,11 @@ kernel_gpu_opencl_wrapper(	int xmax,
 
 	// Create a command queue
 	cl_command_queue command_queue;
-	command_queue = clCreateCommandQueue(	context, 
-											device, 
-											0, 
+	command_queue = clCreateCommandQueue(	context,
+											device,
+											0,
 											&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -200,43 +200,43 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	size_t sourceSize = strlen(source);
 
 	// Create the program
-	cl_program program = clCreateProgramWithSource(	context, 
-													1, 
-													&source, 
-													&sourceSize, 
+	cl_program program = clCreateProgramWithSource(	context,
+													1,
+													&source,
+													&sourceSize,
 													&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Compile the program
-	error = clBuildProgram(	program, 
-							1, 
-							&device, 
-							"-I./../", 
-							NULL, 
+	error = clBuildProgram(	program,
+							1,
+							&device,
+							"-I./../",
+							NULL,
 							NULL);
 	// Print warnings and errors from compilation
-	static char log[65536]; 
+	static char log[65536];
 	memset(log, 0, sizeof(log));
-	clGetProgramBuildInfo(	program, 
-							device, 
-							CL_PROGRAM_BUILD_LOG, 
-							sizeof(log)-1, 
-							log, 
+	clGetProgramBuildInfo(	program,
+							device,
+							CL_PROGRAM_BUILD_LOG,
+							sizeof(log)-1,
+							log,
 							NULL);
 	printf("-----OpenCL Compiler Output-----\n");
-	if (strstr(log,"warning:") || strstr(log, "error:")) 
+	if (strstr(log,"warning:") || strstr(log, "error:"))
 		printf("<<<<\n%s\n>>>>\n", log);
 	printf("--------------------------------\n");
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Create kernel
 	cl_kernel kernel;
-	kernel = clCreateKernel(program, 
-							"kernel_gpu_opencl", 
+	kernel = clCreateKernel(program,
+							"kernel_gpu_opencl",
 							&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -263,7 +263,7 @@ kernel_gpu_opencl_wrapper(	int xmax,
 								d_initvalu_mem,				// size of buffer
 								NULL,						// host pointer (optional)
 								&error );					// returned error
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -273,12 +273,12 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	int d_finavalu_mem;
 	d_finavalu_mem = EQUATIONS * sizeof(fp);
 	cl_mem d_finavalu;
-	d_finavalu = clCreateBuffer(context, 
-								CL_MEM_READ_WRITE, 
-								d_finavalu_mem, 
-								NULL, 
+	d_finavalu = clCreateBuffer(context,
+								CL_MEM_READ_WRITE,
+								d_finavalu_mem,
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -288,12 +288,12 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	int d_params_mem;
 	d_params_mem = PARAMETERS * sizeof(fp);
 	cl_mem d_params;
-	d_params = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								d_params_mem, 
-								NULL, 
+	d_params = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								d_params_mem,
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -303,12 +303,12 @@ kernel_gpu_opencl_wrapper(	int xmax,
 	int d_com_mem;
 	d_com_mem = 3 * sizeof(fp);
 	cl_mem d_com;
-	d_com = clCreateBuffer(	context, 
-							CL_MEM_READ_WRITE, 
-							d_com_mem, 
-							NULL, 
+	d_com = clCreateBuffer(	context,
+							CL_MEM_READ_WRITE,
+							d_com_mem,
+							NULL,
 							&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time2 = get_time();
@@ -377,7 +377,7 @@ kernel_gpu_opencl_wrapper(	int xmax,
 
 	// Flush the queue
 	error = clFlush(command_queue);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// ...and finally, the queue and context.

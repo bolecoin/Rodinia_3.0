@@ -1,7 +1,7 @@
 /**
  * @file ex_particle_OPENMP_seq.c
  * @author Michael Trotter & Matt Goodrum
- * @brief Particle filter implementation in C/OpenMP 
+ * @brief Particle filter implementation in C/OpenMP
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,7 +78,7 @@ double * u;
 
 /***************************************************
   @brief initializes the OpenCL context and detects available platforms
-@param use_gpu 
+@param use_gpu
 **************************************************/
 static int initialize(int use_gpu) {
     cl_int result;
@@ -159,7 +159,7 @@ float elapsed_time(long long start_time, long long end_time) {
     return (float) (end_time - start_time) / (1000 * 1000);
 }
 
-/** 
+/**
  * Takes in a double and returns an integer that approximates to that double
  * @return if the mantissa < .5 => return value < input value; else return value > input value
  */
@@ -428,7 +428,7 @@ int findIndex(double * CDF, int lengthCDF, double value) {
 }
 /*
 *@brief allocates and initializes the data for the computation
- * @param Nparticles 
+ * @param Nparticles
  * @param countOnes
 *
 */
@@ -453,7 +453,7 @@ static int allocate(int Nparticles, int countOnes){
 	fclose(fp);
 
 	// OpenCL initialization
-	int use_gpu = 1;
+	int use_gpu = 0;
 	if (initialize(use_gpu)) return -1;
 
 	// compile kernel
@@ -537,7 +537,7 @@ static int allocate(int Nparticles, int countOnes){
 	u_GPU = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof (double) *Nparticles, NULL, &err);
 	if (err != CL_SUCCESS) { printf("ERROR: clCreateBuffer u_GPU (size:%d) => %d\n", Nparticles, err); return -1; }
 
-  
+
 
 }//eo allocate
 
@@ -586,9 +586,9 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 	printf("TIME TO GET WEIGHTSTOOK: %f\n", elapsed_time(get_neighbors, get_weights));
 	//initial likelihood to 0.0
 
-	//allocate all of the memory for the computation 
+	//allocate all of the memory for the computation
 	allocate(Nparticles, countOnes);
-	
+
 	for (x = 0; x < Nparticles; x++) {
 		arrayX[x] = xe;
 		arrayY[x] = ye;
@@ -614,7 +614,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 			//compute the likelihood: remember our assumption is that you know
 			// foreground and the background image intensity distribution.
 			// Notice that we consider here a likelihood ratio, instead of
-			// p(z|x). It is possible in this case. why? a hometask for you.            
+			// p(z|x). It is possible in this case. why? a hometask for you.
 			//calc ind
 			for (y = 0; y < countOnes; y++) {
 				indX = roundDouble(arrayX[x]) + objxy[y * 2 + 1];
@@ -629,7 +629,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 		long long likelihood_time = get_time();
 		printf("TIME TO GET LIKELIHOODS TOOK: %f\n", elapsed_time(error, likelihood_time));
 		// update & normalize weights
-		// using equation (63) of Arulampalam Tutorial          
+		// using equation (63) of Arulampalam Tutorial
 		for (x = 0; x < Nparticles; x++) {
 			weights[x] = weights[x] * exp(likelihood[x]);
 		}
@@ -709,7 +709,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 		err = clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
 		clFinish(cmd_queue);
 		long long start_copy_back = get_time();
-                
+
                 if (err != CL_SUCCESS) {
 			printf("ERROR: clEnqueueNDRangeKernel()=>%d failed\n", err);
 			return -1;
@@ -734,7 +734,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
         long long xyj_time = get_time();
         printf("TIME TO CALC NEW ARRAY X AND Y TOOK: %f\n", elapsed_time(u_time, xyj_time));
         //reassign arrayX and arrayY
-        
+
         //FIXED: this used to be a memory leak where arrayX was assigned the address of xj
         for (x = 0; x < Nparticles; x++) {
             arrayX[x] = xj[x];
@@ -745,7 +745,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
         printf("TIME TO RESET WEIGHTS TOOK: %f\n", elapsed_time(xyj_time, reset));
     }
 
-    
+
     //OpenCL freeing of memory
 
     clReleaseMemObject(u_GPU);

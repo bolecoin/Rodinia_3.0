@@ -67,7 +67,7 @@ static int initialize(int use_gpu)
 	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
 	num_devices = (int) (size / sizeof(cl_device_id));
 	printf("num_devices = %d\n", num_devices);
-	
+
 	if( result != CL_SUCCESS || num_devices < 1 ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
 	device_list = new cl_device_id[num_devices];
 	if( !device_list ) { printf("ERROR: new cl_device_id[] failed\n"); return -1; }
@@ -118,8 +118,8 @@ main ( int argc, char *argv[] )
 	const char *input_file = NULL;
 	float *m, *mm;
 	stopwatch sw;
-	
-	while ((opt = getopt_long(argc, argv, "::vs:i:", 
+
+	while ((opt = getopt_long(argc, argv, "::vs:i:",
                             long_options, &option_index)) != -1 ) {
 		switch(opt){
 			case 'i':
@@ -147,11 +147,11 @@ main ( int argc, char *argv[] )
 			exit(EXIT_FAILURE);
 		}
 	}
-  
+
 	if ( (optind < argc) || (optind == 1)) {
 		fprintf(stderr, "Usage: %s [-v] [-s matrix_size|-i input_file]\n", argv[0]);
 		exit(EXIT_FAILURE);
-	}	
+	}
 
 	if (input_file) {
 		printf("Reading matrix from file %s\n", input_file);
@@ -161,8 +161,8 @@ main ( int argc, char *argv[] )
 			fprintf(stderr, "error create matrix from file %s\n", input_file);
 			exit(EXIT_FAILURE);
 		}
-	} 
-	
+	}
+
 	else if (matrix_dim) {
 	  printf("Creating matrix internally size=%d\n", matrix_dim);
 	  ret = create_matrix(&m, matrix_dim);
@@ -183,21 +183,21 @@ main ( int argc, char *argv[] )
 		// print_matrix(m, matrix_dim);
 		matrix_duplicate(m, &mm, matrix_dim);
 	}
-	
+
 	int sourcesize = 1024*1024;
-	char * source = (char *)calloc(sourcesize, sizeof(char)); 
+	char * source = (char *)calloc(sourcesize, sizeof(char));
 	if(!source) { printf("ERROR: calloc(%d) failed\n", sourcesize); return -1; }
 
 	char * kernel_lud_diag   = "lud_diagonal";
 	char * kernel_lud_peri   = "lud_perimeter";
 	char * kernel_lud_inter  = "lud_internal";
-	FILE * fp = fopen("./lud_kernel.cl", "rb"); 
+	FILE * fp = fopen("./lud_kernel.cl", "rb");
 	if(!fp) { printf("ERROR: unable to open '%s'\n"); return -1; }
 	fread(source + strlen(source), sourcesize, 1, fp);
 	fclose(fp);
 
 	// Use 1: GPU  0: CPU
-	int use_gpu = 1;
+	int use_gpu = 0;        //For AMD APU, we need to choose CPU as the device
 	// OpenCL initialization
 	if(initialize(use_gpu)) return -1;
 	// compile kernel
@@ -206,7 +206,7 @@ main ( int argc, char *argv[] )
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
 	char clOptions[110];
-	//  sprintf(clOptions,"-I../../src"); 
+	//  sprintf(clOptions,"-I../../src");
 	sprintf(clOptions," ");
 #ifdef BLOCK_SIZE
 	sprintf(clOptions + strlen(clOptions), " -DBLOCK_SIZE=%d", BLOCK_SIZE);
@@ -221,77 +221,77 @@ main ( int argc, char *argv[] )
 		//if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
 	}
 	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
-    
+
 	cl_kernel diagnal;
 	cl_kernel perimeter;
 	cl_kernel internal;
-	diagnal   = clCreateKernel(prog, kernel_lud_diag, &err);  
-	perimeter = clCreateKernel(prog, kernel_lud_peri, &err);  
-	internal  = clCreateKernel(prog, kernel_lud_inter, &err);  
+	diagnal   = clCreateKernel(prog, kernel_lud_diag, &err);
+	perimeter = clCreateKernel(prog, kernel_lud_peri, &err);
+	internal  = clCreateKernel(prog, kernel_lud_inter, &err);
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateKernel() 0 => %d\n", err); return -1; }
 	clReleaseProgram(prog);
-  
+
 	//size_t local_work[3] = { 1, 1, 1 };
-	//size_t global_work[3] = {1, 1, 1 }; 
-  
+	//size_t global_work[3] = {1, 1, 1 };
+
 	cl_mem d_m;
 	d_m = clCreateBuffer(context, CL_MEM_READ_WRITE, matrix_dim*matrix_dim * sizeof(float), NULL, &err );
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer d_m (size:%d) => %d\n", matrix_dim*matrix_dim, err); return -1;} 
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer d_m (size:%d) => %d\n", matrix_dim*matrix_dim, err); return -1;}
 
 	/* beginning of timing point */
 	stopwatch_start(&sw);
 	err = clEnqueueWriteBuffer(cmd_queue, d_m, 1, 0, matrix_dim*matrix_dim*sizeof(float), m, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueWriteBuffer d_m (size:%d) => %d\n", matrix_dim*matrix_dim, err); return -1; }
-	
+
 	int i=0;
 	for (i=0; i < matrix_dim-BLOCK_SIZE; i += BLOCK_SIZE) {
-	 
+
 	  clSetKernelArg(diagnal, 0, sizeof(void *), (void*) &d_m);
 	  clSetKernelArg(diagnal, 1, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(diagnal, 2, sizeof(cl_int), (void*) &matrix_dim);
 	  clSetKernelArg(diagnal, 3, sizeof(cl_int), (void*) &i);
-      
+
 	  size_t global_work1[3]  = {BLOCK_SIZE, 1, 1};
 	  size_t local_work1[3]  = {BLOCK_SIZE, 1, 1};
-	   
+
 	  err = clEnqueueNDRangeKernel(cmd_queue, diagnal, 2, NULL, global_work1, local_work1, 0, 0, 0);
-	  if(err != CL_SUCCESS) { printf("ERROR:  diagnal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }	
-	  
+	  if(err != CL_SUCCESS) { printf("ERROR:  diagnal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
+
 	  clSetKernelArg(perimeter, 0, sizeof(void *), (void*) &d_m);
 	  clSetKernelArg(perimeter, 1, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(perimeter, 2, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(perimeter, 3, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(perimeter, 4, sizeof(cl_int), (void*) &matrix_dim);
 	  clSetKernelArg(perimeter, 5, sizeof(cl_int), (void*) &i);
-	  
+
 	  size_t global_work2[3] = {BLOCK_SIZE * 2 * ((matrix_dim-i)/BLOCK_SIZE-1), 1, 1};
 	  size_t local_work2[3]  = {BLOCK_SIZE * 2, 1, 1};
-	  
+
 	  err = clEnqueueNDRangeKernel(cmd_queue, perimeter, 2, NULL, global_work2, local_work2, 0, 0, 0);
-	  if(err != CL_SUCCESS) { printf("ERROR:  perimeter clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }	
-	  
+	  if(err != CL_SUCCESS) { printf("ERROR:  perimeter clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
+
 	  clSetKernelArg(internal, 0, sizeof(void *), (void*) &d_m);
 	  clSetKernelArg(internal, 1, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(internal, 2, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	  clSetKernelArg(internal, 3, sizeof(cl_int), (void*) &matrix_dim);
 	  clSetKernelArg(internal, 4, sizeof(cl_int), (void*) &i);
-      
+
 	  size_t global_work3[3] = {BLOCK_SIZE * ((matrix_dim-i)/BLOCK_SIZE-1), BLOCK_SIZE * ((matrix_dim-i)/BLOCK_SIZE-1), 1};
 	  size_t local_work3[3] = {BLOCK_SIZE, BLOCK_SIZE, 1};
 
 	  err = clEnqueueNDRangeKernel(cmd_queue, internal, 2, NULL, global_work3, local_work3, 0, 0, 0);
-	  if(err != CL_SUCCESS) { printf("ERROR:  internal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }	
+	  if(err != CL_SUCCESS) { printf("ERROR:  internal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
 	}
 	clSetKernelArg(diagnal, 0, sizeof(void *), (void*) &d_m);
 	clSetKernelArg(diagnal, 1, sizeof(float) * BLOCK_SIZE * BLOCK_SIZE, (void*)NULL );
 	clSetKernelArg(diagnal, 2, sizeof(cl_int), (void*) &matrix_dim);
 	clSetKernelArg(diagnal, 3, sizeof(cl_int), (void*) &i);
-      
+
 	size_t global_work1[3]  = {BLOCK_SIZE, 1, 1};
 	size_t local_work1[3]  = {BLOCK_SIZE, 1, 1};
 	err = clEnqueueNDRangeKernel(cmd_queue, diagnal, 2, NULL, global_work1, local_work1, 0, 0, 0);
-	if(err != CL_SUCCESS) { printf("ERROR:  diagnal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }	
-	
+	if(err != CL_SUCCESS) { printf("ERROR:  diagnal clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
+
 	err = clEnqueueReadBuffer(cmd_queue, d_m, 1, 0, matrix_dim*matrix_dim*sizeof(float), m, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueReadBuffer  d_m (size:%d) => %d\n", matrix_dim*matrix_dim, err); return -1; }
 	clFinish(cmd_queue);
@@ -305,15 +305,15 @@ main ( int argc, char *argv[] )
 		printf("After LUD\n");
 		// print_matrix(m, matrix_dim);
 		printf(">>>Verify<<<<\n");
-		lud_verify(mm, m, matrix_dim); 
+		lud_verify(mm, m, matrix_dim);
 		free(mm);
 	}
 
 	free(m);
-	
+
 	if(shutdown()) return -1;
-	
-}				
+
+}
 
 /* ----------  end of function main  ---------- */
 

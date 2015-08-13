@@ -65,7 +65,7 @@ string FileToString(const string fileName)
             f.read(str, fileSize);
             f.close();
             str[size] = '\0';
-        
+
             s = str;
             delete [] str;
             return s;
@@ -121,19 +121,19 @@ void _clCmdParams(int argc, char* argv[]){
 			;
 		}
 	}
-	
+
 }
 
 //---------------------------------------
 //Initlize CL objects
 //--description: there are 5 steps to initialize all the OpenCL objects needed
-//--revised on 04/01/2011: get the number of devices  and 
+//--revised on 04/01/2011: get the number of devices  and
 //  devices have no relationship with context
 void _clInit()
 {
     int DEVICE_ID_INUSED = device_id_inused;
     cl_int resultCL;
-    
+
     oclHandles.context = NULL;
     oclHandles.devices = NULL;
     oclHandles.queue = NULL;
@@ -182,20 +182,20 @@ void _clInit()
     //-----------------------------------------------
     //--cambine-2: create an OpenCL context
     cl_context_properties cprops[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)targetPlatform, 0 };
-    oclHandles.context = clCreateContextFromType(cprops, 
-                                                CL_DEVICE_TYPE_GPU, 
-                                                NULL, 
-                                                NULL, 
+    oclHandles.context = clCreateContextFromType(cprops,
+                                                CL_DEVICE_TYPE_CPU,
+                                                NULL,
+                                                NULL,
                                                 &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.context == NULL))
         throw (string("InitCL()::Error: Creating Context (clCreateContextFromType)"));
     //-----------------------------------------------
-    //--cambine-3: detect OpenCL devices	
+    //--cambine-3: detect OpenCL devices
     /* First, get the size of device list */
-   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, 0, NULL, &deviceListSize);
+   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_CPU, 0, NULL, &deviceListSize);
    if(oclHandles.cl_status!=CL_SUCCESS){
-   	throw(string("exception in _clInit -> clGetDeviceIDs"));   	
+   	throw(string("exception in _clInit -> clGetDeviceIDs"));
    }
    if (deviceListSize == 0)
         throw(string("InitCL()::Error: No devices found."));
@@ -209,16 +209,16 @@ void _clInit()
         throw(string("InitCL()::Error: Could not allocate memory."));
 
     /* Next, get the device list data */
-   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, deviceListSize, \
+   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_CPU, deviceListSize, \
 								oclHandles.devices, NULL);
    if(oclHandles.cl_status!=CL_SUCCESS){
-   	throw(string("exception in _clInit -> clGetDeviceIDs-2"));   	
+   	throw(string("exception in _clInit -> clGetDeviceIDs-2"));
    }
    //-----------------------------------------------
-   //--cambine-4: Create an OpenCL command queue    
-    oclHandles.queue = clCreateCommandQueue(oclHandles.context, 
-                                            oclHandles.devices[DEVICE_ID_INUSED], 
-                                            0, 
+   //--cambine-4: Create an OpenCL command queue
+    oclHandles.queue = clCreateCommandQueue(oclHandles.context,
+                                            oclHandles.devices[DEVICE_ID_INUSED],
+                                            0,
                                             &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.queue == NULL))
@@ -229,14 +229,14 @@ void _clInit()
     const char * source    = source_str.c_str();
     size_t sourceSize[]    = { source_str.length() };
 
-    oclHandles.program = clCreateProgramWithSource(oclHandles.context, 
-                                                    1, 
+    oclHandles.program = clCreateProgramWithSource(oclHandles.context,
+                                                    1,
                                                     &source,
                                                     sourceSize,
                                                     &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.program == NULL))
-        throw(string("InitCL()::Error: Loading Binary into cl_program. (clCreateProgramWithBinary)"));    
+        throw(string("InitCL()::Error: Loading Binary into cl_program. (clCreateProgramWithBinary)"));
     //insert debug information
     //std::string options= "-cl-nv-verbose"; //Doesn't work on AMD machines
     //options += " -cl-nv-opt-level=3";
@@ -247,43 +247,43 @@ void _clInit()
         cerr << "InitCL()::Error: In clBuildProgram" << endl;
 
 		size_t length;
-        resultCL = clGetProgramBuildInfo(oclHandles.program, 
-                                        oclHandles.devices[DEVICE_ID_INUSED], 
-                                        CL_PROGRAM_BUILD_LOG, 
-                                        0, 
-                                        NULL, 
+        resultCL = clGetProgramBuildInfo(oclHandles.program,
+                                        oclHandles.devices[DEVICE_ID_INUSED],
+                                        CL_PROGRAM_BUILD_LOG,
+                                        0,
+                                        NULL,
                                         &length);
-        if(resultCL != CL_SUCCESS) 
+        if(resultCL != CL_SUCCESS)
             throw(string("InitCL()::Error: Getting Program build info(clGetProgramBuildInfo)"));
 
 		char* buffer = (char*)malloc(length);
-        resultCL = clGetProgramBuildInfo(oclHandles.program, 
-                                        oclHandles.devices[DEVICE_ID_INUSED], 
-                                        CL_PROGRAM_BUILD_LOG, 
-                                        length, 
-                                        buffer, 
+        resultCL = clGetProgramBuildInfo(oclHandles.program,
+                                        oclHandles.devices[DEVICE_ID_INUSED],
+                                        CL_PROGRAM_BUILD_LOG,
+                                        length,
+                                        buffer,
                                         NULL);
-        if(resultCL != CL_SUCCESS) 
+        if(resultCL != CL_SUCCESS)
             throw(string("InitCL()::Error: Getting Program build info(clGetProgramBuildInfo)"));
 
 		cerr << buffer << endl;
         free(buffer);
 
         throw(string("InitCL()::Error: Building Program (clBuildProgram)"));
-    } 
+    }
 
     //get program information in intermediate representation
-    #ifdef PTX_MSG    
+    #ifdef PTX_MSG
     size_t binary_sizes[deviceListSize];
     char * binaries[deviceListSize];
-    //figure out number of devices and the sizes of the binary for each device. 
+    //figure out number of devices and the sizes of the binary for each device.
     oclHandles.cl_status = clGetProgramInfo(oclHandles.program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t)*deviceListSize, &binary_sizes, NULL );
     if(oclHandles.cl_status!=CL_SUCCESS){
         throw(string("--cambine:exception in _InitCL -> clGetProgramInfo-2"));
     }
 
     std::cout<<"--cambine:"<<binary_sizes<<std::endl;
-    //copy over all of the generated binaries. 
+    //copy over all of the generated binaries.
     for(int i=0;i<deviceListSize;i++)
 	binaries[i] = (char *)malloc( sizeof(char)*(binary_sizes[i]+1));
     oclHandles.cl_status = clGetProgramInfo(oclHandles.program, CL_PROGRAM_BINARIES, sizeof(char *)*deviceListSize, binaries, NULL );
@@ -326,7 +326,7 @@ void _clInit()
     oclHandles.cl_status = clGetProgramBuildInfo(oclHandles.program, oclHandles.devices[DEVICE_ID_INUSED], CL_PROGRAM_BUILD_LOG, 0, NULL, &ret_val_size);
     if(oclHandles.cl_status!=CL_SUCCESS){
 	throw(string("exceptions in _InitCL -> getting resource information"));
-    }    
+    }
 
     build_log = (char *)malloc(ret_val_size+1);
     oclHandles.cl_status = clGetProgramBuildInfo(oclHandles.program, oclHandles.devices[DEVICE_ID_INUSED], CL_PROGRAM_BUILD_LOG, ret_val_size, build_log, NULL);
@@ -411,7 +411,7 @@ cl_mem _clCreateAndCpyMem(int size, void * h_mem_source) throw(string){
 }
 //-------------------------------------------------------
 //--cambine:	create read only  buffer for devices
-//--date:	17/01/2011	
+//--date:	17/01/2011
 cl_mem _clMallocRW(int size, void * h_mem_ptr) throw(string){
  	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, size, h_mem_ptr, &oclHandles.cl_status);
@@ -423,7 +423,7 @@ cl_mem _clMallocRW(int size, void * h_mem_ptr) throw(string){
 }
 //-------------------------------------------------------
 //--cambine:	create read and write buffer for devices
-//--date:	17/01/2011	
+//--date:	17/01/2011
 cl_mem _clMalloc(int size, void * h_mem_ptr) throw(string){
  	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, size, h_mem_ptr, &oclHandles.cl_status);
@@ -445,7 +445,7 @@ void _clMemcpyH2D(cl_mem d_mem, int size, const void *h_mem_ptr) throw(string){
 	#endif
 }
 //--------------------------------------------------------
-//--cambine:create buffer and then copy data from host to device with pinned 
+//--cambine:create buffer and then copy data from host to device with pinned
 // memory
 cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source) throw(string){
 	cl_mem d_mem, d_mem_pinned;
@@ -484,7 +484,7 @@ cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source) throw(string){
 	if(oclHandles.cl_status != CL_SUCCESS)
 		throw(string("excpetion in _clCreateAndCpyMem() -> clEnqueueWriteBuffer"));
 	#endif
-	
+
 	return d_mem;
 }
 
@@ -513,22 +513,22 @@ void _clMemcpyD2H(cl_mem d_mem, int size, void * h_mem) throw(string){
 				break;
 			case CL_INVALID_CONTEXT:
 				oclHandles.error_str += "CL_INVALID_CONTEXT";
-				break;	
+				break;
 			case CL_INVALID_MEM_OBJECT:
 				oclHandles.error_str += "CL_INVALID_MEM_OBJECT";
 				break;
 			case CL_INVALID_VALUE:
 				oclHandles.error_str += "CL_INVALID_VALUE";
-				break;	
+				break;
 			case CL_INVALID_EVENT_WAIT_LIST:
 				oclHandles.error_str += "CL_INVALID_EVENT_WAIT_LIST";
 				break;
 			case CL_MEM_OBJECT_ALLOCATION_FAILURE:
 				oclHandles.error_str += "CL_MEM_OBJECT_ALLOCATION_FAILURE";
-				break;	
+				break;
 			case CL_OUT_OF_HOST_MEMORY:
 				oclHandles.error_str += "CL_OUT_OF_HOST_MEMORY";
-				break;		
+				break;
 			default:
 				oclHandles.error_str += "Unknown reason";
 				break;
@@ -551,19 +551,19 @@ void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(st
 				break;
 			case CL_INVALID_ARG_INDEX:
 				oclHandles.error_str += "CL_INVALID_ARG_INDEX";
-				break;	
+				break;
 			case CL_INVALID_ARG_VALUE:
 				oclHandles.error_str += "CL_INVALID_ARG_VALUE";
 				break;
 			case CL_INVALID_MEM_OBJECT:
 				oclHandles.error_str += "CL_INVALID_MEM_OBJECT";
-				break;	
+				break;
 			case CL_INVALID_SAMPLER:
 				oclHandles.error_str += "CL_INVALID_SAMPLER";
 				break;
 			case CL_INVALID_ARG_SIZE:
 				oclHandles.error_str += "CL_INVALID_ARG_SIZE";
-				break;	
+				break;
 			case CL_OUT_OF_RESOURCES:
 				oclHandles.error_str += "CL_OUT_OF_RESOURCES";
 				break;
@@ -588,19 +588,19 @@ void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(st
 				break;
 			case CL_INVALID_ARG_INDEX:
 				oclHandles.error_str += "CL_INVALID_ARG_INDEX";
-				break;	
+				break;
 			case CL_INVALID_ARG_VALUE:
 				oclHandles.error_str += "CL_INVALID_ARG_VALUE";
 				break;
 			case CL_INVALID_MEM_OBJECT:
 				oclHandles.error_str += "CL_INVALID_MEM_OBJECT";
-				break;	
+				break;
 			case CL_INVALID_SAMPLER:
 				oclHandles.error_str += "CL_INVALID_SAMPLER";
 				break;
 			case CL_INVALID_ARG_SIZE:
 				oclHandles.error_str += "CL_INVALID_ARG_SIZE";
-				break;	
+				break;
 			case CL_OUT_OF_RESOURCES:
 				oclHandles.error_str += "CL_OUT_OF_RESOURCES";
 				break;
@@ -617,7 +617,7 @@ void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(st
 	}
 }
 void _clFinish() throw(string){
-	oclHandles.cl_status = clFinish(oclHandles.queue);	
+	oclHandles.cl_status = clFinish(oclHandles.queue);
 	#ifdef ERRMSG
 	oclHandles.error_str = "excpetion in _clFinish";
 	switch(oclHandles.cl_status){
@@ -626,7 +626,7 @@ void _clFinish() throw(string){
 			break;
 		case CL_OUT_OF_RESOURCES:
 			oclHandles.error_str += "CL_OUT_OF_RESOURCES";
-			break;		
+			break;
 		case CL_OUT_OF_HOST_MEMORY:
 			oclHandles.error_str += "CL_OUT_OF_HOST_MEMORY";
 			break;
@@ -650,7 +650,7 @@ void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(s
   	size_t local_work_size[] = {work_group_size, 1};
 	size_t global_work_size[] = {work_items, 1};
 	oclHandles.cl_status = clEnqueueNDRangeKernel(oclHandles.queue, oclHandles.kernel[kernel_id], work_dim, 0, \
-											global_work_size, local_work_size, 0 , 0, &(e[0]) );	
+											global_work_size, local_work_size, 0 , 0, &(e[0]) );
 	#ifdef ERRMSG
 	oclHandles.error_str = "excpetion in _clInvokeKernel() -> ";
 	switch(oclHandles.cl_status)
@@ -697,12 +697,12 @@ void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(s
 		case CL_OUT_OF_HOST_MEMORY:
 			oclHandles.error_str += "CL_OUT_OF_HOST_MEMORY";
 			break;
-		default: 
+		default:
 			oclHandles.error_str += "Unkown reseason";
-			break;		
+			break;
 	}
 	if(oclHandles.cl_status != CL_SUCCESS)
-		throw(oclHandles.error_str);	
+		throw(oclHandles.error_str);
 	#endif
 	//_clFinish();
 	// oclHandles.cl_status = clWaitForEvents(1, &e[0]);
@@ -719,7 +719,7 @@ void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int
 	/*if(work_items%work_group_size != 0)	//process situations that work_items cannot be divided by work_group_size
 	  work_items = work_items + (work_group_size-(work_items%work_group_size));*/
 	oclHandles.cl_status = clEnqueueNDRangeKernel(oclHandles.queue, oclHandles.kernel[kernel_id], work_dim, 0, \
-											global_work_size, local_work_size, 0 , 0, &(e[0]) );	
+											global_work_size, local_work_size, 0 , 0, &(e[0]) );
 	#ifdef ERRMSG
 	oclHandles.error_str = "excpetion in _clInvokeKernel() -> ";
 	switch(oclHandles.cl_status)
@@ -766,12 +766,12 @@ void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int
 		case CL_OUT_OF_HOST_MEMORY:
 			oclHandles.error_str += "CL_OUT_OF_HOST_MEMORY";
 			break;
-		default: 
+		default:
 			oclHandles.error_str += "Unkown reseason";
-			break;		
+			break;
 	}
 	if(oclHandles.cl_status != CL_SUCCESS)
-		throw(oclHandles.error_str);	
+		throw(oclHandles.error_str);
 	#endif
 	//_clFinish();
 	/*oclHandles.cl_status = clWaitForEvents(1, &e[0]);
@@ -789,7 +789,7 @@ void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int
 //release OpenCL objects
 void _clFree(cl_mem ob) throw(string){
 	if(ob!=NULL)
-		oclHandles.cl_status = clReleaseMemObject(ob);	
+		oclHandles.cl_status = clReleaseMemObject(ob);
 	#ifdef ERRMSG
 	oclHandles.error_str = "excpetion in _clFree() ->";
 	switch(oclHandles.cl_status)
@@ -802,11 +802,11 @@ void _clFree(cl_mem ob) throw(string){
 			break;
 		case CL_OUT_OF_HOST_MEMORY:
 			oclHandles.error_str += "CL_OUT_OF_HOST_MEMORY";
-			break;			
-		default: 
+			break;
+		default:
 			oclHandles.error_str += "Unkown reseason";
-			break;		
-	}        
+			break;
+	}
     if (oclHandles.cl_status!= CL_SUCCESS)
        throw(oclHandles.error_str);
 	#endif

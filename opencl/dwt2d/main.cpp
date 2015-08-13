@@ -21,9 +21,9 @@
 #ifdef __APPLE__
 #include <OpenCL/cl.h>
 #else
-#include <CL/opencl.h> 
+#include <CL/opencl.h>
 #endif
- 
+
 #define THREADS 256
 
 struct dwt {
@@ -53,7 +53,7 @@ cl_int errNum = 0;
 
 ///
 // functions for preparing create opencl program, contains CreateContext, CreateProgram, CreateCommandQueue, CreateMemBuffer, and Cleanup
-// Create an OpenCL context on the first available GPU platform. 
+// Create an OpenCL context on the first available GPU platform.
 cl_context CreateContext()
 {
     cl_context context = NULL;
@@ -65,15 +65,15 @@ cl_context CreateContext()
 
     std::vector<cl_platform_id> platformIds(platformIdCount);
     clGetPlatformIDs (platformIdCount, platformIds.data(), NULL);
-	
-	// In this example, first platform is a CPU, the second one is a GPU. we just choose the first available device.  
+
+	// In this example, first platform is a CPU, the second one is a GPU. we just choose the first available device.
     cl_context_properties contextProperties[] =
     {
         CL_CONTEXT_PLATFORM,
         (cl_context_properties)platformIds[1],
         0
     };
-    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU,
+    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU,
                                       NULL, NULL, &errNum);
     if (errNum != CL_SUCCESS)
     {
@@ -86,7 +86,7 @@ cl_context CreateContext()
             return NULL;
         }
     }
-    
+
     return context;
 
 }
@@ -213,7 +213,7 @@ int getImg(char * srcFilename, unsigned char *srcImg, int inputSize)
     // printf("Loading ipnput: %s\n", srcFilename);
     char path[] = "../../data/dwt2d/";
     char *newSrc = NULL;
-    
+
     if((newSrc = (char *)malloc(strlen(srcFilename)+strlen(path)+1)) != NULL)
     {
         newSrc[0] = '\0';
@@ -225,8 +225,8 @@ int getImg(char * srcFilename, unsigned char *srcImg, int inputSize)
 
     //read image
     int i = open(srcFilename, O_RDONLY, 0644);
-    if (i == -1) 
-	{ 
+    if (i == -1)
+	{
         error(0,errno,"cannot access %s", srcFilename);
         return -1;
     }
@@ -331,7 +331,7 @@ void rgbToComponents(cl_mem d_r, cl_mem d_g, cl_mem d_b, unsigned char * h_src, 
 {
     int pixels      = width * height;
     int alignedSize =  DIVANDRND(width*height, THREADS) * THREADS * 3; //aligned to thread block size -- THREADS
-	
+
 	cl_mem cl_d_src;
 	cl_d_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, pixels*3, h_src, &errNum);
 	// fatal_CL(errNum, __LINE__);
@@ -344,14 +344,14 @@ void rgbToComponents(cl_mem d_r, cl_mem d_g, cl_mem d_b, unsigned char * h_src, 
 	errNum |= clSetKernelArg(c_CopySrcToComponents, 2, sizeof(cl_mem), &d_b);
 	errNum |= clSetKernelArg(c_CopySrcToComponents, 3, sizeof(cl_mem), &cl_d_src);
 	errNum |= clSetKernelArg(c_CopySrcToComponents, 4, sizeof(int), &pixels);
-	// fatal_CL(errNum, __LINE__);	
-	
+	// fatal_CL(errNum, __LINE__);
+
 	errNum = clEnqueueNDRangeKernel(commandQueue, c_CopySrcToComponents, 1, NULL, globalWorkSize, localWorkSize, 0, NULL, NULL);
 	// fatal_CL(errNum, __LINE__);
-	
-    // Free Memory 
-	errNum = clReleaseMemObject(cl_d_src);  
-	// fatal_CL(errNum, __LINE__);	
+
+    // Free Memory
+	errNum = clReleaseMemObject(cl_d_src);
+	// fatal_CL(errNum, __LINE__);
 }
 
 
@@ -364,27 +364,27 @@ void bwToComponent(cl_mem d_c, unsigned char * h_src, int width, int height)
 	cl_mem cl_d_src;
     int pixels      = width*height;
     int alignedSize =  DIVANDRND(pixels, THREADS) * THREADS;
-	
+
 	cl_d_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, pixels, h_src, NULL);
 	// fatal_CL(errNum, __LINE__);
-	
+
 	size_t globalWorkSize[1] = { alignedSize/9};
     size_t localWorkSize[1] = { THREADS };
 	assert(alignedSize%(THREADS*3) == 0);
-	
+
 	errNum  = clSetKernelArg(c_CopySrcToComponent, 0, sizeof(cl_mem), &d_c);
 	errNum |= clSetKernelArg(c_CopySrcToComponent, 1, sizeof(cl_mem), &cl_d_src);
 	errNum |= clSetKernelArg(c_CopySrcToComponent, 2, sizeof(int), &pixels);
-	// fatal_CL(errNum, __LINE__);	
-	
+	// fatal_CL(errNum, __LINE__);
+
 	errNum = clEnqueueNDRangeKernel(commandQueue, c_CopySrcToComponent, 1, NULL, globalWorkSize, localWorkSize, 0, NULL, NULL);
-	std::cout<<"in function bwToComponent errNum= "<<errNum<<"\n"; 
+	std::cout<<"in function bwToComponent errNum= "<<errNum<<"\n";
 	// fatal_CL(errNum, __LINE__);
 	std::cout<<"bwToComponent has finished\n";
-	
-    // Free Memory 
-	errNum = clReleaseMemObject(cl_d_src);  
-	// fatal_CL(errNum, __LINE__);	
+
+    // Free Memory
+	errNum = clReleaseMemObject(cl_d_src);
+	// fatal_CL(errNum, __LINE__);
 
 }
 
@@ -395,27 +395,27 @@ void bwToComponent(cl_mem d_c, unsigned char * h_src, int width, int height)
 /// @tparam WIN_SY  height of sliding window
 /// @param in       input image
 /// @param out      output buffer
-/// @param sx       width of the input image 
+/// @param sx       width of the input image
 /// @param sy       height of the input image
-///launchFDWT53Kerneld is in file 
+///launchFDWT53Kerneld is in file
 void launchFDWT53Kernel (int WIN_SX, int WIN_SY, cl_mem in, cl_mem out, int sx, int sy)
 {
     // compute optimal number of steps of each sliding window
 	// cuda_dwt called a function divRndUp from namespace cuda_gwt. this function takes n and d, "return (n / d) + ((n % d) ? 1 : 0);"
 	//
-	
-    const int steps = ( sy/ (15 * WIN_SY)) + ((sy % (15 * WIN_SY)) ? 1 : 0);	
-	
+
+    const int steps = ( sy/ (15 * WIN_SY)) + ((sy % (15 * WIN_SY)) ? 1 : 0);
+
 	int gx = ( sx/ WIN_SX) + ((sx %  WIN_SX) ? 1 : 0);  //use function divRndUp(n, d){return (n / d) + ((n % d) ? 1 : 0);}
 	int gy = ( sy/ (WIN_SY*steps)) + ((sy %  (WIN_SY*steps)) ? 1 : 0);
-	
+
 	printf("sliding steps = %d , gx = %d , gy = %d \n", steps, gx, gy);
-	
+
     // prepare grid size
 	size_t globalWorkSize[2] = { gx*WIN_SX, gy*1};
     size_t localWorkSize[2]  = { WIN_SX , 1};
     // printf("\n globalx=%d, globaly=%d, blocksize=%d\n", gx, gy, WIN_SX);
-	
+
 	errNum  = clSetKernelArg(kl_fdwt53Kernel, 0, sizeof(cl_mem), &in);
 	errNum |= clSetKernelArg(kl_fdwt53Kernel, 1, sizeof(cl_mem), &out);
 	errNum |= clSetKernelArg(kl_fdwt53Kernel, 2, sizeof(int), &sx);
@@ -424,11 +424,11 @@ void launchFDWT53Kernel (int WIN_SX, int WIN_SY, cl_mem in, cl_mem out, int sx, 
 	errNum |= clSetKernelArg(kl_fdwt53Kernel, 5, sizeof(int), &WIN_SX);
 	errNum |= clSetKernelArg(kl_fdwt53Kernel, 6, sizeof(int), &WIN_SY);
 	// fatal_CL(errNum, __LINE__);
-	
+
 	errNum = clEnqueueNDRangeKernel(commandQueue, kl_fdwt53Kernel, 2, NULL, globalWorkSize, localWorkSize, 0, NULL, NULL);
 	// fatal_CL(errNum, __LINE__);
 	printf("kl_fdwt53Kernel in launchFDW53Kernel has finished\n");
-	
+
 
 }
 
@@ -460,32 +460,32 @@ void memCopy (cl_mem dest,  cl_mem src, const size_t sx, const size_t sy){
 void fdwt53(cl_mem in, cl_mem out, int sizeX, int sizeY, int levels)
 {
     // select right width of kernel for the size of the image
-	
-    if(sizeX >= 960) 
+
+    if(sizeX >= 960)
 	{
       launchFDWT53Kernel(192, 8, in, out, sizeX, sizeY);
-    } 
-	else if (sizeX >= 480) 
+    }
+	else if (sizeX >= 480)
 	{
       launchFDWT53Kernel(128, 8, in, out, sizeX, sizeY);
-    } else 
+    } else
 	{
       launchFDWT53Kernel(64, 8, in, out, sizeX, sizeY);
 	}
-		
+
 	// if this was not the last level, continue recursively with other levels
 	if (levels > 1)
 	{
-		// copy output's LL band back into input buffer 
+		// copy output's LL band back into input buffer
 		const int llSizeX = (sizeX / 2) + ((sizeX % 2) ? 1 :0);
 		const int llSizeY = (sizeY / 2) + ((sizeY % 2) ? 1 :0);
 		memCopy(in, out, llSizeX, llSizeY);
-		
+
 		// run remaining levels of FDWT
 		fdwt53(in, out, llSizeX, llSizeY, levels - 1);
-	}	
+	}
 }
-	
+
 
 ///
 // in dwt.cu
@@ -493,17 +493,17 @@ int nStage2dDWT(cl_mem in, cl_mem out, cl_mem backup, int pixWidth, int pixHeigh
 {
     printf("\n*** %d stages of 2D forward DWT:\n", stages);
 
-    // create backup of input, because each test iteration overwrites it 
+    // create backup of input, because each test iteration overwrites it
     const int size = pixHeight * pixWidth * sizeof(int);
-	
-	// Measure time of individual levels. 
+
+	// Measure time of individual levels.
 	if (forward)
 		fdwt53(in, out, pixWidth, pixHeight, stages );
 	//else
 	//	rdwt(in, out, pixWidth, pixHeight, stages);
-	// rdwt means rdwt53(can be found in file rdwt53.cu) which has not been defined 
-	
-	
+	// rdwt means rdwt53(can be found in file rdwt53.cu) which has not been defined
+
+
 	return 0;
 }
 
@@ -519,7 +519,7 @@ void samplesToChar(unsigned char * dst, int * src, int samplesNum)
 	{
         int r = src[i]+128;
         if (r > 255) r = 255;
-        if (r < 0)   r = 0; 
+        if (r < 0)   r = 0;
         dst[i] = (unsigned char)r;
     }
 }
@@ -536,33 +536,33 @@ int writeLinear(cl_mem component, int pixWidth, int pixHeight, const char * file
     int i;
     int size;
     int samplesNum = pixWidth*pixHeight;
-	
+
 	size = samplesNum*sizeof(int);
 	gpu_output = (int *)malloc(size);
     memset(gpu_output, 0, size);
 	result = (unsigned char *)malloc(samplesNum);
-	
+
 	errNum = clEnqueueReadBuffer(commandQueue, component, CL_TRUE, 0, size, gpu_output, 0, NULL, NULL);
-	// fatal_CL(errNum, __LINE__);	
-	
-	// T to char 
+	// fatal_CL(errNum, __LINE__);
+
+	// T to char
 	samplesToChar(result, gpu_output, samplesNum);
-	
-	// Write component 
+
+	// Write component
 	char outfile[strlen(filename)+strlen(suffix)];
     strcpy(outfile, filename);
     strcpy(outfile+strlen(filename), suffix);
     i = open(outfile, O_CREAT|O_WRONLY, 0644);
-	if (i == -1) 
-	{ 
+	if (i == -1)
+	{
         error(0,errno,"cannot access %s", outfile);
         return -1;
     }
 	printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
     write(i, result, samplesNum);
     close(i);
-	
-	// Clean up 
+
+	// Clean up
     free(gpu_output);
     free(result);
 
@@ -572,12 +572,12 @@ int writeLinear(cl_mem component, int pixWidth, int pixHeight, const char * file
 
 
 ///
-// Write output visual ordered 
+// Write output visual ordered
 //in file dwt.cu
 int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, const char * filename, const char * suffix)
 {
 	struct band {
-        int dimX; 
+        int dimX;
         int dimY;
     };
     struct dimensions {
@@ -596,7 +596,7 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     int yOffset;
     int samplesNum = pixWidth*pixHeight;
     struct dimensions * bandDims;
-	
+
 	bandDims = (struct dimensions *)malloc(stages * sizeof(struct dimensions));
 
     bandDims[0].LL.dimX = DIVANDRND(pixWidth,2);
@@ -607,8 +607,8 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     bandDims[0].LH.dimY = pixHeight - bandDims[0].LL.dimY;
     bandDims[0].HH.dimX = bandDims[0].HL.dimX;
     bandDims[0].HH.dimY = bandDims[0].LH.dimY;
-	
-	for (i = 1; i < stages; i++) 
+
+	for (i = 1; i < stages; i++)
 	{
         bandDims[i].LL.dimX = DIVANDRND(bandDims[i-1].LL.dimX,2);
         bandDims[i].LL.dimY = DIVANDRND(bandDims[i-1].LL.dimY,2);
@@ -619,10 +619,10 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
         bandDims[i].HH.dimX = bandDims[i].HL.dimX;
         bandDims[i].HH.dimY = bandDims[i].LH.dimY;
     }
-	
+
 #if 0
     printf("Original image pixWidth x pixHeight: %d x %d\n", pixWidth, pixHeight);
-    for (i = 0; i < stages; i++) 
+    for (i = 0; i < stages; i++)
 	{
         printf("Stage %d: LL: pixWidth x pixHeight: %d x %d\n", i, bandDims[i].LL.dimX, bandDims[i].LL.dimY);
         printf("Stage %d: HL: pixWidth x pixHeight: %d x %d\n", i, bandDims[i].HL.dimX, bandDims[i].HL.dimY);
@@ -631,8 +631,8 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     }
 #endif
 
-	size = samplesNum*sizeof(int);	
-	
+	size = samplesNum*sizeof(int);
+
 	src = (int *)malloc(size);
     memset(src, 0, size);
 	dst = (int *)malloc(size);
@@ -640,24 +640,24 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
 	result = (unsigned char *)malloc(samplesNum);
 
 	errNum = clEnqueueReadBuffer(commandQueue, component, CL_TRUE, 0, size, src, 0, NULL, NULL);
-	// fatal_CL(errNum, __LINE__);	
-	
+	// fatal_CL(errNum, __LINE__);
 
-	// LL Band 	
+
+	// LL Band
 	size = bandDims[stages-1].LL.dimX * sizeof(int);
-	for (i = 0; i < bandDims[stages-1].LL.dimY; i++) 
+	for (i = 0; i < bandDims[stages-1].LL.dimY; i++)
 	{
         memcpy(dst+i*pixWidth, src+i*bandDims[stages-1].LL.dimX, size);
 	}
-    
+
     for (s = stages - 1; s >= 0; s--) {
         // HL Band
         size = bandDims[s].HL.dimX * sizeof(int);
         offset = bandDims[s].LL.dimX * bandDims[s].LL.dimY;
-        for (i = 0; i < bandDims[s].HL.dimY; i++) 
+        for (i = 0; i < bandDims[s].HL.dimY; i++)
 		{
             memcpy(dst+i*pixWidth+bandDims[s].LL.dimX,
-                src+offset+i*bandDims[s].HL.dimX, 
+                src+offset+i*bandDims[s].HL.dimX,
                 size);
         }
 
@@ -665,48 +665,48 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
 		size = bandDims[s].LH.dimX * sizeof(int);
         offset += bandDims[s].HL.dimX * bandDims[s].HL.dimY;
         yOffset = bandDims[s].LL.dimY;
-        for (i = 0; i < bandDims[s].HL.dimY; i++) 
+        for (i = 0; i < bandDims[s].HL.dimY; i++)
 		{
             memcpy(dst+(yOffset+i)*pixWidth,
-                src+offset+i*bandDims[s].LH.dimX, 
+                src+offset+i*bandDims[s].LH.dimX,
                 size);
         }
-	
+
 		//HH band
         size = bandDims[s].HH.dimX * sizeof(int);
         offset += bandDims[s].LH.dimX * bandDims[s].LH.dimY;
         yOffset = bandDims[s].HL.dimY;
-        for (i = 0; i < bandDims[s].HH.dimY; i++) 
+        for (i = 0; i < bandDims[s].HH.dimY; i++)
 		{
             memcpy(dst+(yOffset+i)*pixWidth+bandDims[s].LH.dimX,
-                src+offset+i*bandDims[s].HH.dimX, 
+                src+offset+i*bandDims[s].HH.dimX,
                 size);
         }
 	}
-	
+
     // Write component
-	samplesToChar(result, dst, samplesNum);	
-	
+	samplesToChar(result, dst, samplesNum);
+
 	char outfile[strlen(filename)+strlen(suffix)];
     strcpy(outfile, filename);
     strcpy(outfile+strlen(filename), suffix);
     i = open(outfile, O_CREAT|O_WRONLY, 0644);
-	
-    if (i == -1) 
+
+    if (i == -1)
 	{
         error(0,errno,"cannot access %s", outfile);
         return -1;
     }
-	
+
     printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
     write(i, result, samplesNum);
     close(i);
-	
+
 	free(src);
 	free(dst);
     free(result);
     free(bandDims);
-	
+
 	return 0;
 }
 
@@ -719,58 +719,58 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
 template <typename T>
 void processDWT(struct dwt *d, int forward, int writeVisual)
 {
-	
+
 	int componentSize = d->pixWidth * d->pixHeight * sizeof(T);
-    
+
     T *c_r_out, *c_g_out, *c_b_out, *backup, *c_r, *c_g, *c_b;
-	
+
 	// initialize to zeros
 	T *temp = (T *)malloc(componentSize);
 	memset(temp, 0, componentSize);
-	
+
 	cl_mem cl_c_r_out;
 	cl_c_r_out = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);
 	// fatal_CL(errNum, __LINE__);
-	
-	
-	
+
+
+
 	cl_mem cl_backup;
-	cl_backup  = clCreateBuffer(context, CL_MEM_READ_WRITE |CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);  
+	cl_backup  = clCreateBuffer(context, CL_MEM_READ_WRITE |CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);
 	// fatal_CL(errNum, __LINE__);
-	
+
 	if (d->components == 3) {
-		// Alloc two more buffers for G and B 
+		// Alloc two more buffers for G and B
 		cl_mem cl_c_g_out;
-		cl_c_g_out = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);  
+		cl_c_g_out = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);
 		// fatal_CL(errNum, __LINE__);
-		
+
 		cl_mem cl_c_b_out;
 		cl_c_b_out = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, componentSize, temp, &errNum);
-        // fatal_CL(errNum, __LINE__);	
-        
-        // Load components 
+        // fatal_CL(errNum, __LINE__);
+
+        // Load components
         cl_mem cl_c_r, cl_c_g, cl_c_b;
 		cl_c_r = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum);
-		// fatal_CL(errNum, __LINE__); 		
-		cl_c_g = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum);
-		// fatal_CL(errNum, __LINE__);		
-		cl_c_b = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum); 
 		// fatal_CL(errNum, __LINE__);
-		
-		
+		cl_c_g = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum);
+		// fatal_CL(errNum, __LINE__);
+		cl_c_b = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum);
+		// fatal_CL(errNum, __LINE__);
+
+
         rgbToComponents(cl_c_r, cl_c_g, cl_c_b, d->srcImg, d->pixWidth, d->pixHeight);
-       
-        
+
+
         //Compute DWT and always store int file
-       
+
         nStage2dDWT(cl_c_r, cl_c_r_out, cl_backup, d->pixWidth, d->pixHeight, d->dwtLvls, forward);
         nStage2dDWT(cl_c_g, cl_c_g_out, cl_backup, d->pixWidth, d->pixHeight, d->dwtLvls, forward);
         nStage2dDWT(cl_c_b, cl_c_b_out, cl_backup, d->pixWidth, d->pixHeight, d->dwtLvls, forward);
-        
-        
+
+
         // ---------test----------
 /*      T *h_r_out=(T*)malloc(componentSize);
-		errNum = clEnqueueReadBuffer(commandQueue, cl_c_g_out, CL_TRUE, 0, componentSize, h_r_out, 0, NULL, NULL); 
+		errNum = clEnqueueReadBuffer(commandQueue, cl_c_g_out, CL_TRUE, 0, componentSize, h_r_out, 0, NULL, NULL);
 		fatal_CL(errNum, __LINE__);
         int ii;
 		for(ii=0;ii<componentSize/sizeof(T);ii++) {
@@ -779,48 +779,48 @@ void processDWT(struct dwt *d, int forward, int writeVisual)
         }
 */        // ---------test----------
 
-#ifdef OUTPUT        
+#ifdef OUTPUT
         // Store DWT to file
         if(writeVisual){
             writeNStage2DDWT(cl_c_r_out, d->pixWidth, d->pixHeight, d->dwtLvls, d->outFilename, ".r");
             writeNStage2DDWT(cl_c_g_out, d->pixWidth, d->pixHeight, d->dwtLvls, d->outFilename, ".g");
             writeNStage2DDWT(cl_c_b_out, d->pixWidth, d->pixHeight, d->dwtLvls, d->outFilename, ".b");
-        
+
         } else {
             writeLinear(cl_c_r_out, d->pixWidth, d->pixHeight, d->outFilename, ".r");
             writeLinear(cl_c_g_out, d->pixWidth, d->pixHeight, d->outFilename, ".g");
             writeLinear(cl_c_b_out, d->pixWidth, d->pixHeight, d->outFilename, ".b");
         }
-#endif		
-		
+#endif
+
 		clReleaseMemObject(cl_c_r);
 		clReleaseMemObject(cl_c_g);
 		clReleaseMemObject(cl_c_b);
 		clReleaseMemObject(cl_c_g_out);
 		clReleaseMemObject(cl_c_b_out);
 
-	} else if(d->components == 1) { 
-        // Load components 
+	} else if(d->components == 1) {
+        // Load components
         cl_mem cl_c_r;
 		cl_c_r = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,componentSize, temp, &errNum);
-		// fatal_CL(errNum, __LINE__); 		
-        
+		// fatal_CL(errNum, __LINE__);
+
         bwToComponent(cl_c_r, d->srcImg, d->pixWidth, d->pixHeight);
 
         // Compute DWT
         nStage2dDWT(cl_c_r, cl_c_r_out, cl_backup, d->pixWidth, d->pixHeight, d->dwtLvls, forward);
-    
+
         //Store DWT to file
         if(writeVisual){
             writeNStage2DDWT(cl_c_r_out, d->pixWidth, d->pixHeight, d->dwtLvls, d->outFilename, ".r");
         } else {
             writeLinear(cl_c_r_out, d->pixWidth, d->pixHeight, d->outFilename, ".r");
         }
-		
-		
+
+
 		clReleaseMemObject(cl_c_r);
 
-    } 
+    }
 
 	free(temp);
 	clReleaseMemObject(cl_c_r_out);
@@ -828,11 +828,11 @@ void processDWT(struct dwt *d, int forward, int writeVisual)
 
 
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     int optindex = 0;
     char ch;
-    struct option longopts[] = 
+    struct option longopts[] =
 	{
         {"dimension",   required_argument, 0, 'd'}, //dimensions of src img
         {"components",  required_argument, 0, 'c'}, //numger of components of src img
@@ -844,27 +844,27 @@ int main(int argc, char **argv)
         {"97",          no_argument,       0, '9'}, //9/7 transform
         {"53",          no_argument,       0, '5' }, //5/3transform
         {"write-visual",no_argument,       0, 'w' }, //write output (subbands) in visual (tiled) order instead of linear
-        {"help",        no_argument,       0, 'h'}  
+        {"help",        no_argument,       0, 'h'}
     };
-    
+
     int pixWidth    = 0; //<real pixWidth
     int pixHeight   = 0; //<real pixHeight
     int compCount   = 3; //number of components; 3 for RGB or YUV, 4 for RGBA
-    int bitDepth    = 8; 
+    int bitDepth    = 8;
     int dwtLvls     = 3; //default numuber of DWT levels
     int device      = 0;
     int forward     = 1; //forward transform
     int dwt97       = 0; //1=dwt9/7, 0=dwt5/3 transform
     int writeVisual = 0; //write output (subbands) in visual (tiled) order instead of linear
     char * pos;
- 
-    while ((ch = getopt_long(argc, argv, "d:c:b:l:D:fr95wh", longopts, &optindex)) != -1) 
+
+    while ((ch = getopt_long(argc, argv, "d:c:b:l:D:fr95wh", longopts, &optindex)) != -1)
 	{
         switch (ch) {
         case 'd':
             pixWidth = atoi(optarg);
             pos = strstr(optarg, "x");
-            if (pos == NULL || pixWidth == 0 || (strlen(pos) >= strlen(optarg))) 
+            if (pos == NULL || pixWidth == 0 || (strlen(pos) >= strlen(optarg)))
 			{
                 usage();
                 return -1;
@@ -911,27 +911,27 @@ int main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-    if (argc == 0) 
+    if (argc == 0)
 	{ // at least one filename is expected
         printf("Please supply src file name\n");
         usage();
         return -1;
     }
 
-    if (pixWidth <= 0 || pixHeight <=0) 
+    if (pixWidth <= 0 || pixHeight <=0)
 	{
         printf("Wrong or missing dimensions\n");
         usage();
         return -1;
     }
 
-    if (forward == 0) 
+    if (forward == 0)
 	{
         writeVisual = 0; //do not write visual when RDWT
     }
-	
-	
-	
+
+
+
 	//
 	// device init
 	// Create an OpenCL context on first available platform
@@ -950,7 +950,7 @@ int main(int argc, char **argv)
         Cleanup(context, commandQueue, program, kernel);
         return 1;
     }
-	
+
 	// Create OpenCL program from com_dwt.cl kernel source
 	program = CreateProgram(context, cldevice, "com_dwt.cl");
     if (program == NULL)
@@ -959,26 +959,26 @@ int main(int argc, char **argv)
     }
 
 	// Create OpenCL kernel
-	c_CopySrcToComponents = clCreateKernel(program, "c_CopySrcToComponents", NULL); 
+	c_CopySrcToComponents = clCreateKernel(program, "c_CopySrcToComponents", NULL);
 	if (c_CopySrcToComponents == NULL)
     {
         std::cerr << "Failed to create kernel" << std::endl;
     }
 
-	c_CopySrcToComponent = clCreateKernel(program, "c_CopySrcToComponent", NULL); 
+	c_CopySrcToComponent = clCreateKernel(program, "c_CopySrcToComponent", NULL);
 	if (c_CopySrcToComponent == NULL)
     {
         std::cerr << "Failed to create kernel" << std::endl;
     }
-	
-	kl_fdwt53Kernel = clCreateKernel(program, "cl_fdwt53Kernel", NULL); 
+
+	kl_fdwt53Kernel = clCreateKernel(program, "cl_fdwt53Kernel", NULL);
     if (kl_fdwt53Kernel == NULL)
 	{
 		std::cerr<<"Failed to create kernel\n";
 	}
-	
 
-	
+
+
 	//initialize struct dwt
 	struct dwt *d;
     d = (struct dwt *)malloc(sizeof(struct dwt));
@@ -987,11 +987,11 @@ int main(int argc, char **argv)
     d->pixHeight = pixHeight;
     d->components = compCount;
     d->dwtLvls  = dwtLvls;
-	
+
 	// file names
     d->srcFilename = (char *)malloc(strlen(argv[0]));
     strcpy(d->srcFilename, argv[0]);
-    if (argc == 1) 
+    if (argc == 1)
 	{ // only one filename supplyed
         d->outFilename = (char *)malloc(strlen(d->srcFilename)+4);
         strcpy(d->outFilename, d->srcFilename);
@@ -1008,38 +1008,38 @@ int main(int argc, char **argv)
     printf(" DWT levels:\t\t%d\n", dwtLvls);
     printf(" Forward transform:\t%d\n", forward);
     printf(" 9/7 transform:\t\t%d\n", dwt97);
-    
+
     //data sizes
     int inputSize = pixWidth*pixHeight*compCount; //<amount of data (in bytes) to proccess
 
     //load img source image
 	d->srcImg = (unsigned char *) malloc (inputSize);
-	if (getImg(d->srcFilename, d->srcImg, inputSize) == -1) 
+	if (getImg(d->srcFilename, d->srcImg, inputSize) == -1)
         return -1;
-		
+
 	 // DWT
 	// Create memory objects, Set arguments for kernel functions, Queue the kernel up for execution across the array, Read the output buffer back to the Host, Output the result buffer
-	
-    if (forward == 1) 
+
+    if (forward == 1)
 	{
         if(dwt97 == 1 )
             processDWT<float>(d, forward, writeVisual);
         else // 5/3
             processDWT<int>(d, forward, writeVisual);
     }
-    else 
+    else
 	{ // reverse
         if(dwt97 == 1 )
             processDWT<float>(d, forward, writeVisual);
         else // 5/3
             processDWT<int>(d, forward, writeVisual);
     }
-	
+
 
 	Cleanup(context, commandQueue, program, kernel);
 	clReleaseKernel(c_CopySrcToComponents);
 	clReleaseKernel(c_CopySrcToComponent);
-	
+
     return 0;
-	
+
 }

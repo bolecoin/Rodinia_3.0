@@ -36,7 +36,7 @@
 //	KERNEL_GPU_CUDA_WRAPPER FUNCTION
 //========================================================================================================================================================================================================200
 
-void 
+void
 kernel_gpu_opencl_wrapper(	record *records,
 							long records_mem,
 							knode *knodes,
@@ -91,18 +91,18 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 	// Get the number of available platforms
 	cl_uint num_platforms;
-	error = clGetPlatformIDs(	0, 
-								NULL, 
+	error = clGetPlatformIDs(	0,
+								NULL,
 								&num_platforms);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Get the list of available platforms
 	cl_platform_id *platforms = (cl_platform_id *)malloc(sizeof(cl_platform_id) * num_platforms);
-	error = clGetPlatformIDs(	num_platforms, 
-								platforms, 
+	error = clGetPlatformIDs(	num_platforms,
+								platforms,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Select the 1st platform
@@ -110,12 +110,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 	// Get the name of the selected platform and print it (if there are multiple platforms, choose the first one)
 	char pbuf[100];
-	error = clGetPlatformInfo(	platform, 
-								CL_PLATFORM_VENDOR, 
-								sizeof(pbuf), 
-								pbuf, 
+	error = clGetPlatformInfo(	platform,
+								CL_PLATFORM_VENDOR,
+								sizeof(pbuf),
+								pbuf,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 	printf("Platform: %s\n", pbuf);
 
@@ -124,18 +124,18 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//====================================================================================================100
 
 	// Create context properties for selected platform
-	cl_context_properties context_properties[3] = {	CL_CONTEXT_PLATFORM, 
-													(cl_context_properties) platform, 
+	cl_context_properties context_properties[3] = {	CL_CONTEXT_PLATFORM,
+													(cl_context_properties) platform,
 													0};
 
 	// Create context for selected platform being GPU
 	cl_context context;
-	context = clCreateContextFromType(	context_properties, 
-										CL_DEVICE_TYPE_GPU, 
-										NULL, 
-										NULL, 
+	context = clCreateContextFromType(	context_properties,
+										CL_DEVICE_TYPE_CPU,
+										NULL,
+										NULL,
 										&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -144,22 +144,22 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 	// Get the number of devices (previousely selected for the context)
 	size_t devices_size;
-	error = clGetContextInfo(	context, 
-								CL_CONTEXT_DEVICES, 
-								0, 
-								NULL, 
+	error = clGetContextInfo(	context,
+								CL_CONTEXT_DEVICES,
+								0,
+								NULL,
 								&devices_size);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Get the list of devices (previousely selected for the context)
 	cl_device_id *devices = (cl_device_id *) malloc(devices_size);
-	error = clGetContextInfo(	context, 
-								CL_CONTEXT_DEVICES, 
-								devices_size, 
-								devices, 
+	error = clGetContextInfo(	context,
+								CL_CONTEXT_DEVICES,
+								devices_size,
+								devices,
 								NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Select the first device (previousely selected for the context) (if there are multiple devices, choose the first one)
@@ -167,12 +167,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	device = devices[0];
 
 	// Get the name of the selected device (previousely selected for the context) and print it
-	error = clGetDeviceInfo(device, 
-							CL_DEVICE_NAME, 
-							sizeof(pbuf), 
-							pbuf, 
+	error = clGetDeviceInfo(device,
+							CL_DEVICE_NAME,
+							sizeof(pbuf),
+							pbuf,
 							NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 	printf("Device: %s\n", pbuf);
 
@@ -182,11 +182,11 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 	// Create a command queue
 	cl_command_queue command_queue;
-	command_queue = clCreateCommandQueue(	context, 
-											device, 
-											0, 
+	command_queue = clCreateCommandQueue(	context,
+											device,
+											0,
 											&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//====================================================================================================100
@@ -198,16 +198,16 @@ kernel_gpu_opencl_wrapper(	record *records,
 	size_t sourceSize = strlen(source);
 
 	// Create the program
-	cl_program program = clCreateProgramWithSource(	context, 
-													1, 
-													&source, 
-													&sourceSize, 
+	cl_program program = clCreateProgramWithSource(	context,
+													1,
+													&source,
+													&sourceSize,
 													&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	char clOptions[110];
-	//  sprintf(clOptions,"-I../../src");                                                                                 
+	//  sprintf(clOptions,"-I../../src");
 	sprintf(clOptions,"-I./../");
 
 #ifdef DEFAULT_ORDER
@@ -216,34 +216,34 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 
 	// Compile the program
-	error = clBuildProgram(	program, 
-							1, 
-							&device, 
-							clOptions, 
-							NULL, 
+	error = clBuildProgram(	program,
+							1,
+							&device,
+							clOptions,
+							NULL,
 							NULL);
 	// Print warnings and errors from compilation
-	static char log[65536]; 
+	static char log[65536];
 	memset(log, 0, sizeof(log));
-	clGetProgramBuildInfo(	program, 
-							device, 
-							CL_PROGRAM_BUILD_LOG, 
-							sizeof(log)-1, 
-							log, 
+	clGetProgramBuildInfo(	program,
+							device,
+							CL_PROGRAM_BUILD_LOG,
+							sizeof(log)-1,
+							log,
 							NULL);
 	printf("-----OpenCL Compiler Output-----\n");
-	if (strstr(log,"warning:") || strstr(log, "error:")) 
+	if (strstr(log,"warning:") || strstr(log, "error:"))
 		printf("<<<<\n%s\n>>>>\n", log);
 	printf("--------------------------------\n");
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Create kernel
 	cl_kernel kernel;
-	kernel = clCreateKernel(program, 
-							"findK", 
+	kernel = clCreateKernel(program,
+							"findK",
 							&error);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time1 = get_time();
@@ -265,12 +265,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem recordsD;
-	recordsD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								records_mem, 
-								NULL, 
+	recordsD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								records_mem,
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -278,12 +278,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem knodesD;
-	knodesD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								knodes_mem, 
-								NULL, 
+	knodesD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								knodes_mem,
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -291,12 +291,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem currKnodeD;
-	currKnodeD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
+	currKnodeD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								count*sizeof(long),
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -304,12 +304,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem offsetD;
-	offsetD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
+	offsetD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								count*sizeof(long),
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -317,12 +317,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem keysD;
-	keysD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
+	keysD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								count*sizeof(long),
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -338,12 +338,12 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//==================================================50
 
 	cl_mem ansD;
-	ansD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(record), 
-								NULL, 
+	ansD = clCreateBuffer(	context,
+								CL_MEM_READ_WRITE,
+								count*sizeof(record),
+								NULL,
 								&error );
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time2 = get_time();
@@ -377,7 +377,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -393,7 +393,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -409,7 +409,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -425,7 +425,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -441,7 +441,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
@@ -465,7 +465,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time3 = get_time();
@@ -497,59 +497,59 @@ kernel_gpu_opencl_wrapper(	record *records,
 	//	Kernel Arguments
 	//====================================================================================================100
 
-	clSetKernelArg(	kernel, 
-					0, 
-					sizeof(long), 
+	clSetKernelArg(	kernel,
+					0,
+					sizeof(long),
 					(void *) &maxheight);
-	clSetKernelArg(	kernel, 
-					1, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					1,
+					sizeof(cl_mem),
 					(void *) &knodesD);
-	clSetKernelArg(	kernel, 
-					2, 
-					sizeof(long), 
+	clSetKernelArg(	kernel,
+					2,
+					sizeof(long),
 					(void *) &knodes_elem);
-	clSetKernelArg(	kernel, 
-					3, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					3,
+					sizeof(cl_mem),
 					(void *) &recordsD);
 
-	clSetKernelArg(	kernel, 
-					4, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					4,
+					sizeof(cl_mem),
 					(void *) &currKnodeD);
-	clSetKernelArg(	kernel, 
-					5, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					5,
+					sizeof(cl_mem),
 					(void *) &offsetD);
-	clSetKernelArg(	kernel, 
-					6, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					6,
+					sizeof(cl_mem),
 					(void *) &keysD);
-	clSetKernelArg(	kernel, 
-					7, 
-					sizeof(cl_mem), 
+	clSetKernelArg(	kernel,
+					7,
+					sizeof(cl_mem),
 					(void *) &ansD);
 
 	//====================================================================================================100
 	//	Kernel
 	//====================================================================================================100
 
-	error = clEnqueueNDRangeKernel(	command_queue, 
-									kernel, 
-									1, 
-									NULL, 
-									global_work_size, 
-									local_work_size, 
-									0, 
-									NULL, 
+	error = clEnqueueNDRangeKernel(	command_queue,
+									kernel,
+									1,
+									NULL,
+									global_work_size,
+									local_work_size,
+									0,
+									NULL,
 									NULL);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// Wait for all operations to finish NOT SURE WHERE THIS SHOULD GO
 	error = clFinish(command_queue);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time4 = get_time();
@@ -579,7 +579,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 								0,							// Number of events in wait list. Not used.
 								NULL,						// Event wait list. Not used.
 								NULL);						// Event object for determining status. Not used.
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	time5 = get_time();
@@ -613,7 +613,7 @@ kernel_gpu_opencl_wrapper(	record *records,
 
 	// Flush the queue
 	error = clFlush(command_queue);
-	if (error != CL_SUCCESS) 
+	if (error != CL_SUCCESS)
 		fatal_CL(error, __LINE__);
 
 	// ...and finally, the queue and context.

@@ -510,7 +510,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     fclose(fp);
 
     // OpenCL initialization
-    int use_gpu = 1;
+    int use_gpu = 0;
     if (initialize(use_gpu)) return -1;
 
     // compile kernel
@@ -841,7 +841,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
 	 for (x = 0; x < Nparticles; x++) {
             // if( 0.0000000 < arrayX[x]*weights[x]) printf("arrayX[%d]:%f, arrayY[%d]:%f, weights[%d]:%0.10f\n",x,arrayX[x], x, arrayY[x], x, weights[x]);
 	//	printf("arrayX[%d]:%f | arrayY[%d]:%f | weights[%d]:%f\n",
- 	//		x, arrayX[x], x, arrayY[x], x, weights[x]); 
+ 	//		x, arrayX[x], x, arrayY[x], x, weights[x]);
              xe += arrayX[x] * weights[x];
              ye += arrayY[x] * weights[x];
              total+= weights[x];

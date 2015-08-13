@@ -32,7 +32,7 @@ cl_kernel dilate_kernel;
 
 // Sets up and invokes the GICOV kernel and returns its output
 float *GICOV_OpenCL(int grad_m, int grad_n, float *host_grad_x, float *host_grad_y) {
-	
+
 	cl_int error;
 
 	int MaxR = MAX_RAD + 2;
@@ -66,11 +66,11 @@ float *GICOV_OpenCL(int grad_m, int grad_n, float *host_grad_x, float *host_grad
 	memset(host_gicov, 0, grad_mem_size);
 	device_gicov = clCreateBuffer(context, CL_MEM_READ_WRITE | /*CL_MEM_COPY_HOST_PTR*/ CL_MEM_USE_HOST_PTR, grad_mem_size, host_gicov, &error);
 	check_error(error, __FILE__, __LINE__);
-	
+
 	// Load the kernel source from the file
 	const char *source = load_kernel_source("find_ellipse_kernel.cl");
 	size_t sourceSize = strlen(source);
-	
+
 	// Compile the kernel
 	cl_program program = clCreateProgramWithSource(context, 1, &source, &sourceSize, &error);
     check_error(error, __FILE__, __LINE__);
@@ -91,11 +91,11 @@ float *GICOV_OpenCL(int grad_m, int grad_n, float *host_grad_x, float *host_grad
 	dilate_kernel = clCreateKernel(program, "dilate_kernel", &error);
     check_error(error, __FILE__, __LINE__);
 
-	
+
     // Setup execution parameters
-    cl_int local_work_size = grad_m - (2 * MaxR); 
+    cl_int local_work_size = grad_m - (2 * MaxR);
     cl_int num_work_groups = grad_n - (2 * MaxR);
-   
+
 	// Set the kernel arguments
 	clSetKernelArg(GICOV_kernel, 0, sizeof(cl_int), (void *) &grad_m);
 	clSetKernelArg(GICOV_kernel, 1, sizeof(cl_mem), (void *) &device_grad_x);
@@ -119,7 +119,7 @@ float *GICOV_OpenCL(int grad_m, int grad_n, float *host_grad_x, float *host_grad
 	// Execute the GICOV kernel
 	error = clEnqueueNDRangeKernel(command_queue, GICOV_kernel, 1, NULL, &global_work_size, &work_group_size, 0, NULL, NULL);
 	check_error(error, __FILE__, __LINE__);
-	
+
 
 	// Check for kernel errors
 	error = clFinish(command_queue);
@@ -145,12 +145,12 @@ cl_mem c_strel;
 float *dilate_OpenCL(int max_gicov_m, int max_gicov_n, int strel_m, int strel_n) {
 
 	cl_int error;
-	
+
 	// Allocate device memory for result
 	unsigned int max_gicov_mem_size = sizeof(float) * max_gicov_m * max_gicov_n;
 	cl_mem device_img_dilated = clCreateBuffer(context, CL_MEM_WRITE_ONLY, max_gicov_mem_size, NULL, &error);
 	check_error(error, __FILE__, __LINE__);
-	
+
 	#ifdef USE_IMAGE
 	// Copy the input matrix of GICOV values to an image
 	// Define the image parameters
@@ -166,7 +166,7 @@ float *dilate_OpenCL(int max_gicov_m, int max_gicov_n, int strel_m, int strel_n)
 	error = clEnqueueCopyBufferToImage(command_queue, device_gicov, device_gicov_image, 0, offset, region, 0, NULL, NULL);
 	check_error(error, __FILE__, __LINE__);
 	#endif
-    
+
 	// Setup execution parameters
 	size_t global_work_size = max_gicov_m * max_gicov_n;
 	size_t local_work_size = 176;
@@ -174,7 +174,7 @@ float *dilate_OpenCL(int max_gicov_m, int max_gicov_n, int strel_m, int strel_n)
 	if (global_work_size % local_work_size != 0) {
 		global_work_size = ((global_work_size / local_work_size) + 1) * local_work_size;
 	}
-	
+
 	// Set the kernel arguments
 	clSetKernelArg(dilate_kernel, 0, sizeof(cl_int), (void *) &max_gicov_m);
 	clSetKernelArg(dilate_kernel, 1, sizeof(cl_int), (void *) &max_gicov_n);
@@ -191,7 +191,7 @@ float *dilate_OpenCL(int max_gicov_m, int max_gicov_n, int strel_m, int strel_n)
 	// Execute the dilation kernel
 	error = clEnqueueNDRangeKernel(command_queue, dilate_kernel, 1, NULL, &global_work_size, &local_work_size, 0, NULL, NULL);
 	check_error(error, __FILE__, __LINE__);
-	
+
 	// Check for kernel errors
 	error = clFinish(command_queue);
 	check_error(error, __FILE__, __LINE__);
@@ -221,29 +221,29 @@ void select_device() {
 	cl_uint num_platforms;
 	error = clGetPlatformIDs(0, NULL, &num_platforms);
 	check_error(error, __FILE__, __LINE__);
-	
+
 	// Make sure at least one platform is available
 	if (num_platforms == 0) {
 		printf("Error: No OpenCL platforms available\n");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	// Get the list of platforms
 	cl_platform_id *platform_ids = (cl_platform_id *) malloc(sizeof(cl_platform_id) * num_platforms);
 	error = clGetPlatformIDs(num_platforms, platform_ids, NULL);
 	check_error(error, __FILE__, __LINE__);
-	
+
 	// Iterate through all available platforms, choosing the first one that has a GPU
 	int i;
 	for (i = 0; i < num_platforms; i++) {
-	
+
 		// Create an OpenCL context
 		cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties) platform_ids[i], 0};
-		context = clCreateContextFromType(ctxprop, CL_DEVICE_TYPE_GPU, NULL, NULL, &error);
+		context = clCreateContextFromType(ctxprop, CL_DEVICE_TYPE_CPU, NULL, NULL, &error);
 		// If this platform has no GPU, try the next one
 		if (error == CL_DEVICE_NOT_FOUND) continue;
 		check_error(error, __FILE__, __LINE__);
-		
+
 		// Get the list of devices (GPUs)
 		size_t size;
 		error = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, NULL, &size);
@@ -256,15 +256,15 @@ void select_device() {
 		device = device_list[0];
 		command_queue = clCreateCommandQueue(context, device, 0, &error);
 		check_error(error, __FILE__, __LINE__);
-		
+
 		// Print the device name
 		char cBuffer[1024];
 		clGetDeviceInfo(device_list[0], CL_DEVICE_NAME, sizeof(cBuffer), &cBuffer, NULL);
 		printf("Running on: %s\n", cBuffer);
-		
+
 		return;
 	}
-	
+
 	// If we reach here, no platform has a GPU
 	printf("Error: None of the platforms has a GPU\n");
 	exit(EXIT_FAILURE);

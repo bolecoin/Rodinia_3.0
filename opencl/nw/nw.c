@@ -19,7 +19,7 @@
 
 #ifdef NV //NVIDIA
 	#include <oclUtils.h>
-#else 
+#else
 	#include <CL/cl.h>
 #endif
 
@@ -76,7 +76,7 @@ static int initialize(int use_gpu)
 	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
 	num_devices = (int) (size / sizeof(cl_device_id));
 	printf("num_devices = %d\n", num_devices);
-	
+
 	if( result != CL_SUCCESS || num_devices < 1 ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
 	device_list = new cl_device_id[num_devices];
 	if( !device_list ) { printf("ERROR: new cl_device_id[] failed\n"); return -1; }
@@ -113,7 +113,7 @@ int maximum( int a,
 	int k;
 	if( a <= b )
 	  k = b;
-	else 
+	else
 	  k = a;
 	if( k <=c )
 	  return(c);
@@ -154,7 +154,7 @@ int main(int argc, char **argv){
     else{
 	     usage(argc, argv);
     }
-	
+
 	if(atoi(argv[1])%16!=0){
 	fprintf(stderr,"The dimension values must be a multiple of 16\n");
 	exit(1);
@@ -166,14 +166,14 @@ int main(int argc, char **argv){
 	int *reference;
 	int *input_itemsets;
 	int *output_itemsets;
-	
+
 	reference = (int *)malloc( max_rows * max_cols * sizeof(int) );
     input_itemsets = (int *)malloc( max_rows * max_cols * sizeof(int) );
 	output_itemsets = (int *)malloc( max_rows * max_cols * sizeof(int) );
-	
+
 	srand(7);
-	
-	//initialization 
+
+	//initialization
 	for (int i = 0 ; i < max_cols; i++){
 		for (int j = 0 ; j < max_rows; j++){
 			input_itemsets[i*max_cols+j] = 0;
@@ -183,11 +183,11 @@ int main(int argc, char **argv){
 	for( int i=1; i< max_rows ; i++){    //initialize the cols
 			input_itemsets[i*max_cols] = rand() % 10 + 1;
 	}
-	
+
     for( int j=1; j< max_cols ; j++){    //initialize the rows
 			input_itemsets[j] = rand() % 10 + 1;
 	}
-	
+
 	for (int i = 1 ; i < max_cols; i++){
 		for (int j = 1 ; j < max_rows; j++){
 		reference[i*max_cols+j] = blosum62[input_itemsets[i*max_cols]][input_itemsets[j]];
@@ -198,16 +198,16 @@ int main(int argc, char **argv){
        input_itemsets[i*max_cols] = -i * penalty;
 	for( int j = 1; j< max_cols ; j++)
        input_itemsets[j] = -j * penalty;
-	
+
 	int sourcesize = 1024*1024;
-		
-	char * source = (char *)calloc(sourcesize, sizeof(char)); 
+
+	char * source = (char *)calloc(sourcesize, sizeof(char));
 	if(!source) { printf("ERROR: calloc(%d) failed\n", sourcesize); return -1; }
 
 	// read the kernel core source
 	char * kernel_nw1  = "nw_kernel1";
 	char * kernel_nw2  = "nw_kernel2";
-	FILE * fp = fopen(tempchar, "rb"); 
+	FILE * fp = fopen(tempchar, "rb");
 	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); return -1; }
 	fread(source + strlen(source), sourcesize, 1, fp);
 	fclose(fp);
@@ -216,14 +216,14 @@ int main(int argc, char **argv){
 	nworkitems = BLOCK_SIZE;
 
 	if(nworkitems < 1 || workgroupsize < 0){
-		printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n"); 
+		printf("ERROR: invalid or missing <num_work_items>[/<work_group_size>]\n");
 		return -1;
 	}
 		// set global and local workitems
 	size_t local_work[3] = { (workgroupsize>0)?workgroupsize:1, 1, 1 };
 	size_t global_work[3] = { nworkitems, 1, 1 }; //nworkitems = no. of GPU threads
-	
-	int use_gpu = 1;
+
+	int use_gpu = 0;
 	// OpenCL initialization
 	if(initialize(use_gpu)) return -1;
 
@@ -234,7 +234,7 @@ int main(int argc, char **argv){
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
 
 	char clOptions[110];
-	//  sprintf(clOptions,"-I../../src");                                                                                 
+	//  sprintf(clOptions,"-I../../src");
 	sprintf(clOptions," ");
 
 #ifdef BLOCK_SIZE
@@ -250,40 +250,40 @@ int main(int argc, char **argv){
 		if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
 	}*/
 	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
-    	
+
 	cl_kernel kernel1;
 	cl_kernel kernel2;
-	kernel1 = clCreateKernel(prog, kernel_nw1, &err);  
-	kernel2 = clCreateKernel(prog, kernel_nw2, &err);  
+	kernel1 = clCreateKernel(prog, kernel_nw1, &err);
+	kernel2 = clCreateKernel(prog, kernel_nw2, &err);
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateKernel() 0 => %d\n", err); return -1; }
 	clReleaseProgram(prog);
-	
-		
-	
+
+
+
 	// creat buffers
 	cl_mem input_itemsets_d;
 	cl_mem output_itemsets_d;
 	cl_mem reference_d;
-	
+
 	input_itemsets_d = clCreateBuffer(context, CL_MEM_READ_WRITE, max_cols * max_rows * sizeof(int), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer input_item_set (size:%d) => %d\n", max_cols * max_rows, err); return -1;}
 	reference_d		 = clCreateBuffer(context, CL_MEM_READ_WRITE, max_cols * max_rows * sizeof(int), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer reference (size:%d) => %d\n", max_cols * max_rows, err); return -1;}
 	output_itemsets_d = clCreateBuffer(context, CL_MEM_READ_WRITE, max_cols * max_rows * sizeof(int), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer output_item_set (size:%d) => %d\n", max_cols * max_rows, err); return -1;}
-	
+
 	//write buffers
 	err = clEnqueueWriteBuffer(cmd_queue, input_itemsets_d, 1, 0, max_cols * max_rows * sizeof(int), input_itemsets, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueWriteBuffer bufIn1 (size:%d) => %d\n", max_cols * max_rows, err); return -1; }
 	err = clEnqueueWriteBuffer(cmd_queue, reference_d, 1, 0, max_cols * max_rows * sizeof(int), reference, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueWriteBuffer bufIn2 (size:%d) => %d\n", max_cols * max_rows, err); return -1; }
-		
+
 	int worksize = max_cols - 1;
 	printf("worksize = %d\n", worksize);
 	//these two parameters are for extension use, don't worry about it.
 	int offset_r = 0, offset_c = 0;
 	int block_width = worksize/BLOCK_SIZE ;
-	
+
 	clSetKernelArg(kernel1, 0, sizeof(void *), (void*) &reference_d);
 	clSetKernelArg(kernel1, 1, sizeof(void *), (void*) &input_itemsets_d);
 	clSetKernelArg(kernel1, 2, sizeof(void *), (void*) &output_itemsets_d);
@@ -307,20 +307,20 @@ int main(int argc, char **argv){
 	clSetKernelArg(kernel2, 9, sizeof(cl_int), (void*) &worksize);
 	clSetKernelArg(kernel2, 10, sizeof(cl_int), (void*) &offset_r);
 	clSetKernelArg(kernel2, 11, sizeof(cl_int), (void*) &offset_c);
-	
+
 	printf("Processing upper-left matrix\n");
 	for( int blk = 1 ; blk <= worksize/BLOCK_SIZE ; blk++){
-	
+
 		global_work[0] = BLOCK_SIZE * blk;
 		local_work[0]  = BLOCK_SIZE;
 		clSetKernelArg(kernel1, 7, sizeof(cl_int), (void*) &blk);
 		err = clEnqueueNDRangeKernel(cmd_queue, kernel1, 2, NULL, global_work, local_work, 0, 0, 0);
-		if(err != CL_SUCCESS) { printf("ERROR: 1  clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }			
+		if(err != CL_SUCCESS) { printf("ERROR: 1  clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
 	}
 	clFinish(cmd_queue);
-	
+
 	printf("Processing lower-right matrix\n");
-	for( int blk =  worksize/BLOCK_SIZE - 1  ; blk >= 1 ; blk--){	   
+	for( int blk =  worksize/BLOCK_SIZE - 1  ; blk >= 1 ; blk--){
 		global_work[0] = BLOCK_SIZE * blk;
 		local_work[0] =  BLOCK_SIZE;
 		clSetKernelArg(kernel2, 7, sizeof(cl_int), (void*) &blk);
@@ -332,12 +332,12 @@ int main(int argc, char **argv){
 	err = clEnqueueReadBuffer(cmd_queue, input_itemsets_d, 1, 0, max_cols * max_rows * sizeof(int), output_itemsets, 0, 0, 0);
 	clFinish(cmd_queue);
 
-//#define TRACEBACK	
+//#define TRACEBACK
 #ifdef TRACEBACK
-	
+
 	FILE *fpo = fopen("result.txt","w");
 	fprintf(fpo, "print traceback value GPU:\n");
-    
+
 	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){
 		int nw, n, w, traceback;
 		if ( i == max_rows - 2 && j == max_rows - 2 )
@@ -365,7 +365,7 @@ int main(int argc, char **argv){
 		new_nw = nw + reference[i * max_cols + j];
 		new_w = w - penalty;
 		new_n = n - penalty;
-		
+
 		traceback = maximum(new_nw, new_w, new_n);
 		if(traceback == new_nw)
 			traceback = nw;
@@ -373,7 +373,7 @@ int main(int argc, char **argv){
 			traceback = w;
 		if(traceback == new_n)
             traceback = n;
-			
+
 		fprintf(fpo, "%d ", traceback);
 
 		if(traceback == nw )
@@ -388,7 +388,7 @@ int main(int argc, char **argv){
 		else
 		;
 	}
-	
+
 	fclose(fpo);
 
 #endif
@@ -404,6 +404,6 @@ int main(int argc, char **argv){
 	free(reference);
 	free(input_itemsets);
 	free(output_itemsets);
-	
+
 }
 
